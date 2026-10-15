@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카카오맵 장소 검색 서비스</title>
+    <style>
+        /* 기본 스타일 리셋 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            font-family: 'Malgun Gothic', sans-serif;
+            overflow: hidden;
+        }
+
+        /* 메인 컨테이너: 왼쪽/오른쪽 2분할 레이아웃 */
+        .container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 왼쪽 검색 패널 영역 */
+        .sidebar {
+            width: 380px;
+            height: 100%;
+            background-color: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        /* 검색 입력 박스 영역 */
+        .search-box {
+            padding: 20px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: #fbd300; /* 카카오 노란색 액센트 */
+        }
+
+        .search-box button {
+            padding: 10px 16px;
+            background-color: #ffeb00;
+            color: #3c1e1e;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .search-box button:hover {
+            background-color: #f7e300;
+        }
+
+        /* 검색 결과 리스트 영역 */
+        .result-list {
+            flex: 1;
+            overflow-y: auto;
+            list-style: none;
+        }
+
+        .result-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            background-color: #ffffff;
+            transition: background-color 0.2s;
+        }
+
+        .result-item:hover {
+            background-color: #f1f3f5;
+        }
+
+        .result-item h4 {
+            font-size: 16px;
+            color: #333333;
+            margin-bottom: 5px;
+        }
+
+        .result-item p {
+            font-size: 13px;
+            color: #666666;
+            line-height: 1.4;
+        }
+
+        .result-item .phone {
+            font-size: 12px;
+            color: #092e6b;
+            margin-top: 4px;
+        }
+
+        /* 결과가 없거나 초기 안내 문구 스타일 */
+        .placeholder-text {
+            padding: 40px 20px;
+            text-align: center;
+            color: #868e96;
+            font-size: 14px;
+        }
+
+        /* 오른쪽 지도 영역 */
+        .map-container {
+            flex: 1;
+            height: 100%;
+        }
+    </style>
+
+    <!-- 카카오 지도 JavaScript API 불러오기 (autoload=false 설정) -->
+    <!-- services 라이브러리를 함께 불러와야 장소 검색 키워드(Places) 기능이 작동합니다. -->
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=0a438029f17b05ff2cb37a31998226c3&libraries=services&autoload=false"></script>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 왼쪽 패널: 검색창 및 검색 결과 목록 -->
+        <div class="sidebar">
+            <form class="search-box" id="searchForm" onsubmit="return false;">
+                <input type="text" id="keywordInput" placeholder="장소를 검색하세요 (예: 강남역 맛집)" />
+                <button type="submit" id="searchBtn">검색</button>
+            </form>
+            <ul class="result-list" id="resultList">
+                <li class="placeholder-text">검색어를 입력 후 검색 버튼을 누르세요.</li>
+            </ul>
+        </div>
+
+        <!-- 오른쪽 영역: 지도 표시 -->
+        <div class="map-container" id="map"></div>
+    </div>
+
+    <script>
+        // 전역 변수 선언
+        let map; // 지도 객체
+        let ps; // 장소 검색 서비스 객체
+        let infowindow; // 마커 클릭 시 표시할 정보창
+        let markers = []; // 생성된 마커들을 관리하기 위한 배열
+
+        // 카카오 API 스크립트가 완전히 로드된 후 실행되도록 설정
+        kakao.maps.load(function () {
+            initMap();
+        });
+
+        // 지도 및 초기 설정 함수
+        function initMap() {
+            const container = document.getElementById('map
